@@ -251,7 +251,23 @@ def add_song_sidebar():
         if title and artist:
             normalized = normalize_song(song)
             all_songs = st.session_state.songs[:]
-            all_songs.append(normalized)
+
+            # Fixing the possibility to add duplicates and adding the same song + artist with different genres
+            # all_songs.append(normalized)
+
+            key = (normalized["title"].strip().lower(), normalized["artist"].strip().lower())
+            updated = False
+
+            for i, s in enumerate(all_songs):
+                s_key = (str(s.get("title", "")).strip().lower(), str(s.get("artist", "")).strip().lower())
+                if s_key == key:
+                    all_songs[i] = normalized  # overwrite with latest values
+                    updated = True
+                    break
+
+            if not updated:
+                all_songs.append(normalized)
+
             st.session_state.songs = all_songs
 
 

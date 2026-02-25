@@ -60,8 +60,14 @@ def normalize_song(raw: Song) -> Song:
 def classify_song(song: Song, profile: Dict[str, object]) -> str:
     """Return a mood label given a song and user profile."""
     energy = song.get("energy", 0)
-    genre = song.get("genre", "")
-    title = song.get("title", "")
+
+
+    # genre = song.get("genre", "")
+    # title = song.get("title", "")
+    title = str(song.get("title", "")).lower()
+    genre = str(song.get("genre", "")).lower()
+
+
 
     hype_min_energy = profile.get("hype_min_energy", 7)
     chill_max_energy = profile.get("chill_max_energy", 3)
@@ -101,7 +107,10 @@ def merge_playlists(a: PlaylistMap, b: PlaylistMap) -> PlaylistMap:
     """Merge two playlist maps into a new map."""
     merged: PlaylistMap = {}
     for key in set(list(a.keys()) + list(b.keys())):
-        merged[key] = a.get(key, [])
+
+        # merged[key] = a.get(key, [])
+        merged[key] = list(a.get(key, []))  # copy
+        
         merged[key].extend(b.get(key, []))
     return merged
 
@@ -112,22 +121,44 @@ def compute_playlist_stats(playlists: PlaylistMap) -> Dict[str, object]:
     for songs in playlists.values():
         all_songs.extend(songs)
 
+
+    # Adding uniqueness by (title, artist)
+    seen = set()
+    unique_songs: List[Song] = []
+    for s in all_songs:
+        key = (str(s.get("title", "")).strip().lower(), str(s.get("artist", "")).strip().lower())
+        if key not in seen:
+            seen.add(key)
+            unique_songs.append(s)
+
+
     hype = playlists.get("Hype", [])
     chill = playlists.get("Chill", [])
     mixed = playlists.get("Mixed", [])
 
-    total = len(hype)
-    hype_ratio = len(hype) / total if total > 0 else 0.0
+    # Shouldn't be just length of hype
+    # total = len(hype)
+    total = len(unique_songs)
+    hype_ratio = (len(hype) / total) if total > 0 else 0.0
 
     avg_energy = 0.0
-    if all_songs:
-        total_energy = sum(song.get("energy", 0) for song in hype)
-        avg_energy = total_energy / len(all_songs)
 
-    top_artist, top_count = most_common_artist(all_songs)
+    # Taking into consideration the uniqueness of the songs:
+
+    # if all_songs:
+    if unique_songs:
+        # total_energy = sum(song.get("energy", 0) for song in hype)
+        total_energy = sum(int(s.get("energy", 0)) for s in unique_songs)
+        # avg_energy = total_energy / len(all_songs)
+        avg_energy = total_energy / len(unique_songs)
+
+    # top_artist, top_count = most_common_artist(all_songs)
+    top_artist, top_count = most_common_artist(unique_songs)
+
 
     return {
-        "total_songs": len(all_songs),
+        # "total_songs": len(all_songs),
+        "total_songs": total,
         "hype_count": len(hype),
         "chill_count": len(chill),
         "mixed_count": len(mixed),
@@ -167,8 +198,13 @@ def search_songs(
     filtered: List[Song] = []
 
     for song in songs:
-        value = str(song.get(field, "")).lower()
-        if value and value in q:
+        value = str(song.get(field, "")).lower().strip()
+
+
+        # Fixing search -> making sure partial match works as well
+        # if value and value in q:
+
+        if q and value and q in value:
             filtered.append(song)
 
     return filtered
@@ -184,7 +220,10 @@ def lucky_pick(
     elif mode == "chill":
         songs = playlists.get("Chill", [])
     else:
-        songs = playlists.get("Hype", []) + playlists.get("Chill", [])
+
+        # Adding Mixed to Lucky Pick as well:
+        # songs = playlists.get("Hype", []) + playlists.get("Chill", [])
+        songs = playlists.get("Hype", []) + playlists.get("Chill", []) + playlists.get("Mixed", [])
 
     return random_choice_or_none(songs)
 
@@ -192,6 +231,10 @@ def lucky_pick(
 def random_choice_or_none(songs: List[Song]) -> Optional[Song]:
     """Return a random song or None."""
     import random
+
+    # Making sure that None is returner if the list is empty:
+    if not songs:
+        return None
 
     return random.choice(songs)
 
