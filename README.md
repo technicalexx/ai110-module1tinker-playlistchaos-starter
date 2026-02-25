@@ -11,6 +11,33 @@ Issues:
 5. Changing "Hype min energy" level to 9" -> includes a few songs with lower level of energy (same change in "Chill max energy" works properly) -> logic issue
 6. Search issues: no matches when entering only part of the name or using lower cases for song names
 
+Attempted Solutions:
+
+1. and 5. Could be intended behavior because it's not only checking energy level but also checking certain genre
+2. and 4. Fixed the possibility to add duplicates or same song + same artist with different genre
+3. Since it is randomized, most likely getting the same song 3-4 times in a row is appropriate. However, the logic itself has 2 bugs:
+   - random_choice_or_none() will throw if songs is empty (it never returns None)
+   - “any” mode excludes Mixed (your spec says ideally include Mixed)
+     => lucky_pick() and random_choice_or_none() functions were adjusted
+4. Backwards search -> fixed + added partial match
+
+Additional small bugs based on the code itself:
+
+1. In compute_playlist_stats():
+   - total = len(hype) (wrong — should be total unique songs)
+   - avg_energy sums only hype energy but divides by all_songs
+   - hype_ratio uses wrong denominator
+
+-> logic was adjusted + made stats use unique songs
+
+2. Chill keyword check is case-sensitive right now. If the title contains “LoFi” or “Ambient” with different casing, it can miss.
+
+Additional suggestion from AI:
+
+merge_playlists mutates lists
+This isn’t causing any main issues right now, but it’s a classic “AI wrote it wrong” landmine:
+merged[key] points at the same list as a[key], so .extend() mutates a too.
+
 ---
 
 Your AI assistant tried to build a smart playlist generator. The app runs, but some of the behavior is unpredictable. Your task is to explore the app, investigate the code, and use an AI assistant to debug and improve it.
